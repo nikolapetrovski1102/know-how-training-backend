@@ -1,0 +1,114 @@
+﻿@model Web.Admin.Areas.Admin.Models.PageEditViewModel
+
+@{
+    ViewData["Title"] = "Edit Page - " + Model.Slug;
+}
+
+<h1 class="mb-3">Edit Page: @Model.Slug</h1>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+
+<form asp-action="Edit" method="post">
+    <input type="hidden" asp-for="PageId" />
+
+    <div class="mb-3">
+        <label asp-for="Slug" class="form-label">Technical name (slug)</label>
+        <input asp-for="Slug" class="form-control" />
+        <small class="text-muted">Used in URL and React route. Do not change unless you know what you are doing.</small>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="form-check">
+                <input asp-for="IsPublished" class="form-check-input" />
+                <label asp-for="IsPublished" class="form-check-label">Page is visible on website</label>
+            </div>
+            <div class="form-check mt-2">
+                <input asp-for="IsMenuItem" class="form-check-input" />
+                <label asp-for="IsMenuItem" class="form-check-label">Show in top menu</label>
+            </div>
+            <div class="mt-3">
+                <label asp-for="MenuSortOrder" class="form-label">Menu order</label>
+                <input asp-for="MenuSortOrder" class="form-control" />
+            </div>
+        </div>
+    </div>
+
+    <hr />
+
+    <!-- Language Tabs -->
+    <ul class="nav nav-tabs mb-3" role="tablist">
+        @for (int i = 0; i < Model.Languages.Count; i++)
+        {
+            var lang = Model.Languages[i];
+            <li class="nav-item" role="presentation">
+                <button class="nav-link @(i == 0 ? "active" : "")"
+                        id="tab-@lang.LanguageCode"
+                        data-bs-toggle="tab"
+                        data-bs-target="#pane-@lang.LanguageCode"
+                        type="button"
+                        role="tab">
+                    @lang.LanguageName (@lang.LanguageCode.ToUpper())
+                </button>
+            </li>
+        }
+    </ul>
+
+    <div class="tab-content">
+        @for (int i = 0; i < Model.Languages.Count; i++)
+        {
+            var lang = Model.Languages[i];
+            <div class="tab-pane fade @(i == 0 ? "show active" : "")"
+                 id="pane-@lang.LanguageCode" role="tabpanel">
+                <input type="hidden" asp-for="Languages[@i].LanguageId" />
+                <input type="hidden" asp-for="Languages[@i].LanguageCode" />
+                <input type="hidden" asp-for="Languages[@i].LanguageName" />
+
+                <h3>SEO</h3>
+                <div class="mb-3">
+                    <label asp-for="Languages[@i].SeoTitle" class="form-label">Meta title</label>
+                    <input asp-for="Languages[@i].SeoTitle" class="form-control" />
+                </div>
+                <div class="mb-3">
+                    <label asp-for="Languages[@i].SeoDescription" class="form-label">Meta description</label>
+                    <textarea asp-for="Languages[@i].SeoDescription" class="form-control" rows="2"></textarea>
+                </div>
+
+                <h3>Hero Section</h3>
+                <div class="mb-3">
+                    <label asp-for="Languages[@i].HeroTitle" class="form-label">Main heading</label>
+                    <input asp-for="Languages[@i].HeroTitle" class="form-control" />
+                </div>
+                <div class="mb-3">
+                    <label asp-for="Languages[@i].HeroSubtitle" class="form-label">Subheading</label>
+                    <textarea asp-for="Languages[@i].HeroSubtitle" class="form-control" rows="2"></textarea>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label asp-for="Languages[@i].HeroCtaText" class="form-label">Button text</label>
+                        <input asp-for="Languages[@i].HeroCtaText" class="form-control" />
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Languages[@i].HeroCtaUrl" class="form-label">Button link</label>
+                        <input asp-for="Languages[@i].HeroCtaUrl" class="form-control" />
+                    </div>
+                </div>
+
+                <h3>Other content</h3>
+                <p class="text-muted">
+                    Advanced sections (programs, stats) are configured by a developer.
+                    If you need changes here, please contact support.
+                </p>
+                <textarea asp-for="Languages[@i].ContentSectionsJson"
+                          class="form-control d-none"></textarea>
+            </div>
+        }
+    </div>
+
+    <div class="mt-4">
+        <button type="submit" class="btn btn-primary btn-lg">Save page</button>
+    </div>
+</form>

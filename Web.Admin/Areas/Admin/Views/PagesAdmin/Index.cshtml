@@ -1,0 +1,40 @@
+﻿@model List<Core.Application.DTOs.PageSummaryDto>
+
+@{
+    ViewData["Title"] = "Pages";
+}
+
+<h1 class="mb-4">Website Pages</h1>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Slug</th>
+            <th>Published</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var p in Model)
+        {
+            <tr>
+                <td>@p.Slug</td>
+                <td>
+                    @if (p.IsPublished)
+                    {
+                        <span class="badge bg-success">Visible</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary">Hidden</span>
+                    }
+                </td>
+                <td>
+                    <a asp-action="Edit" asp-route-id="@p.Id" class="btn btn-primary btn-sm">
+                        Edit content
+                    </a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
