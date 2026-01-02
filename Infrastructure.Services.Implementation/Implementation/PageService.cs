@@ -1,107 +1,111 @@
-﻿using Core.Application.Services;
-using Core.Application.DTOs;
-using Microsoft.Data.SqlClient;
+﻿using System;
+using System.Collections.Generic;
+using System.Data;
 using System.Text.Json;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Core.Application.DTOs;
+using Core.Application.Services;
+using Core.Application.Helpers;
 
-namespace Infrastructure.Services.Implementation
+namespace Infrastructure.Data.Services
 {
     public class PageService : IPageService
     {
         private readonly string _connectionString;
+        private readonly ILogger<PageService> _logger;
 
-        public PageService(IConfiguration config)
+        public PageService(IConfiguration configuration, ILogger<PageService> logger)
         {
-            _connectionString = config.GetConnectionString("DefaultConnection")!;
+            _connectionString = configuration.GetConnectionString("DefaultConnection")
+                ?? throw new ArgumentNullException("Connection string not found");
+            _logger = logger;
         }
 
         public async Task<PageDto?> GetPageBySlugAsync(string slug, string languageCode)
         {
-            using var connection = new SqlConnection(_connectionString);
-            await connection.OpenAsync();
-
-            using var cmd = new SqlCommand("GetPageBySlug", connection)
+            try
             {
-                CommandType = System.Data.CommandType.StoredProcedure
-            };
-            cmd.Parameters.AddWithValue("@Slug", slug);
-            cmd.Parameters.AddWithValue("@LanguageCode", languageCode);
+                using var connection = new SqlConnection(_connectionString);
+                await connection.OpenAsync();
 
-            using var reader = await cmd.ExecuteReaderAsync();
-
-            if (await reader.ReadAsync())
-            {
-                var page = new PageDto
+                using var cmd = new SqlCommand("GetPageBySlug", connection)
                 {
-                    Slug = reader["Slug"].ToString()!,
-                    Content = new PageContentDto
-                    {
-                        Seo = new Core.Application.DTOs.SeoDto
-                        {
-                            Title = reader["SeoTitle"]?.ToString(),
-                            Description = reader["SeoDescription"]?.ToString()
-                        },
-                        Hero = reader["HeroTitle"] != DBNull.Value ? new Core.Application.DTOs.HeroDto
-                        {
-                            Title = reader["HeroTitle"].ToString()!,
-                            Subtitle = reader["HeroSubtitle"].ToString()!,
-                            CtaText = reader["HeroCtaText"].ToString()!,
-                            CtaUrl = reader["HeroCtaUrl"].ToString()!
-                        } : null,
-                        Sections = JsonSerializer.Deserialize<List<Core.Application.DTOs.ContentSectionDto>>(
-                            reader["ContentSections"].ToString() ?? "[]") ?? new()
-                    }
+                    CommandType = CommandType.StoredProcedure
                 };
+                cmd.Parameters.AddWithValue("@Slug", slug);
+                cmd.Parameters.AddWithValue("@LanguageCode", languageCode);
 
-                page.Programs = await LoadPageProgramsAsync(connection, slug, languageCode);
+                using var reader = await cmd.ExecuteReaderAsync();
+
+                PageDto? page = null;
+                if (await reader.ReadAsync())
+                {
+                    page = new PageDto
+                    {
+                        PageId = reader.GetInt32("PageId"),
+                        Slug = reader.GetSafeString("Slug")!,
+                        IsPublished = reader.GetBoolean("IsPublished"),
+                        LanguageCode = reader.GetSafeString("LanguageCode")!,
+                        Content = new PageContentDto
+                        {
+                            Seo = new SeoDto
+                            {
+                                Title = reader.GetSafeString("SeoTitle"),
+                                Description = reader.GetSafeString("SeoDescription"),
+                                OpenGraphTitle = reader.GetSafeString("OpenGraphTitle"),
+                                OpenGraphDescription = reader.GetSafeString("OpenGraphDescription"),
+                                OpenGraphImage = reader.GetSafeString("OpenGraphImage")
+                            },
+                            Hero = !reader.IsDBNull("HeroTitle") ? new HeroDto
+                            {
+                                Title = reader.GetSafeString("HeroTitle")!,
+                                Subtitle = reader.GetSafeString("HeroSubtitle"),
+                                CtaText = reader.GetSafeString("HeroCtaText"),
+                                CtaUrl = reader.GetSafeString("HeroCtaUrl"),
+                                Image = reader.GetSafeString("HeroImage") // ✅ NEW
+                            } : null,
+                            Sections = JsonSerializer.Deserialize<List<ContentSectionDto>>(
+                                reader.GetSafeString("ContentSections") ?? "[]") ?? new()
+                        },
+                        Programs = new List<ProgramDto>()
+                    };
+                }
+
+                if (page == null) return null;
+
+                // Read programs
+                if (await reader.NextResultAsync())
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        page.Programs.Add(new ProgramDto
+                        {
+                            Id = reader.GetInt32("Id"),
+                            Slug = reader.GetSafeString("Slug")!,
+                            Title = reader.GetSafeString("Title")!,
+                            ShortDescription = reader.GetSafeString("ShortDescription"),
+                            ImageUrl = reader.GetSafeString("ImageUrl"),
+                            DurationHours = reader.GetSafeDecimal("DurationHours"),
+                            MaxParticipants = reader.GetSafeInt32("MaxParticipants"),
+                            CategoryName = reader.GetSafeString("CategoryName")
+                        });
+                    }
+                }
+
                 return page;
             }
-
-            return null;
-        }
-
-        private async Task<List<Core.Application.DTOs.ProgramDto>> LoadPageProgramsAsync(
-            SqlConnection connection, string slug, string languageCode)
-        {
-            var programs = new List<Core.Application.DTOs.ProgramDto>();
-
-            using var cmd = new SqlCommand("GetPageBySlug", connection)
+            catch (SqlException ex)
             {
-                CommandType = System.Data.CommandType.StoredProcedure
-            };
-            cmd.Parameters.AddWithValue("@Slug", slug);
-            cmd.Parameters.AddWithValue("@LanguageCode", languageCode);
-
-            using var reader = await cmd.ExecuteReaderAsync();
-
-            while (await reader.NextResultAsync())
-            {
-                while (await reader.ReadAsync())
-                {
-                    programs.Add(new Core.Application.DTOs.ProgramDto
-                    {
-                        Id = (int)reader["Id"],
-                        Slug = reader["Slug"].ToString()!,
-                        Title = reader["Title"].ToString()!,
-                        ShortDescription = reader["ShortDescription"]?.ToString(),
-                        ImageUrl = reader["ImageUrl"]?.ToString()
-                    });
-                }
+                _logger.LogError(ex, "Error loading page by slug {Slug}", slug);
+                throw;
             }
-            return programs;
         }
 
         public async Task SeedHomePageAsync()
         {
-            using var connection = new SqlConnection(_connectionString);
-            await connection.OpenAsync();
-
-            using var cmd = new SqlCommand(@"
-                -- Your seed SQL here
-                INSERT INTO Pages (Slug, IsPublished) VALUES ('home', 1);
-            ", connection);
-
-            await cmd.ExecuteNonQueryAsync();
+            await Task.CompletedTask;
         }
     }
 }

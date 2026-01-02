@@ -1,0 +1,61 @@
+﻿@page
+@model Areas.Admin.Pages.Pages.HomeModel
+@{
+    ViewData["Title"] = "Edit Home Page";
+}
+
+<div class="container mt-4">
+    <h1>Edit Home Page <small class="text-muted">(@Model.CurrentLang)</small></h1>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <form method="post">
+        <input type="hidden" name="lang" value="@Model.CurrentLang" />
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Hero (@Model.CurrentLang)</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Page.ContentByLang[CurrentLang].Hero.Title" class="form-label"></label>
+                        <input asp-for="Page.ContentByLang[CurrentLang].Hero.Title" class="form-control" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Hero Subtitle</label>
+                        <input asp-for="Page.ContentByLang[CurrentLang].Hero.Subtitle" class="form-control" />
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label>Primary CTA Label</label>
+                        <input asp-for="Page.ContentByLang[CurrentLang].Hero.PrimaryCta.Label" class="form-control" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label>Primary CTA URL</label>
+                        <input asp-for="Page.ContentByLang[CurrentLang].Hero.PrimaryCta.Url" class="form-control" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" name="lang" value="mk" class="btn btn-success">
+                💾 Save MK
+            </button>
+            <button type="submit" name="lang" value="en" class="btn btn-success">
+                💾 Save EN
+            </button>
+            <a href="/?lang=@Model.CurrentLang" target="_blank" class="btn btn-outline-primary">
+                👁️ Preview
+            </a>
+        </div>
+    </form>
+</div>

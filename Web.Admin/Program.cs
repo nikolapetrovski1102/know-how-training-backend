@@ -1,6 +1,6 @@
 using Core.Application.Services;
-using Infrastructure.Services.Implementation;
-using Infrastructure.Services.Services;
+using Infrastructure.Data.Services;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,7 +21,14 @@ builder.Services.AddCors(options =>
 builder.Services.AddScoped<IPageService, PageService>();
 builder.Services.AddScoped<IPageAdminService, PageAdminService>();
 
+builder.Services.AddDbContext<Areas.Admin.Data.PageContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddRazorPages(options => options.RootDirectory = "/Areas/Admin/Pages");
+
 var app = builder.Build();
+
+app.UseStaticFiles();
 
 if (app.Environment.IsDevelopment())
 {

@@ -8,10 +8,10 @@ namespace Core.Application.DTOs
 {
     public class HeroDto
     {
-        public string? Title { get; set; }
+        public string Title { get; set; } = string.Empty;
         public string? Subtitle { get; set; }
         public string? CtaText { get; set; }
         public string? CtaUrl { get; set; }
-        public string? BackgroundImage { get; set; }
+        public string? Image { get; set; }
     }
 }

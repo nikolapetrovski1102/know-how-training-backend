@@ -10,7 +10,7 @@ namespace Core.Application.Services
     public interface IPageAdminService
     {
         Task<List<PageSummaryDto>> GetAllPagesAsync();
-        Task<PageAdminDto?> GetPageForEditAsync(int pageId);
         Task<bool> SavePageAsync(PageAdminDto page);
+        Task<PageAdminDto?> GetPageForEditAsync(int id);
     }
 }

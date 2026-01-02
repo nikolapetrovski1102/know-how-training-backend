@@ -10,6 +10,8 @@ namespace Core.Application.DTOs
     {
         public string? Title { get; set; }
         public string? Description { get; set; }
-        public string? Keywords { get; set; }
+        public string? OpenGraphTitle { get; set; }
+        public string? OpenGraphDescription { get; set; }
+        public string? OpenGraphImage { get; set; }
     }
 }

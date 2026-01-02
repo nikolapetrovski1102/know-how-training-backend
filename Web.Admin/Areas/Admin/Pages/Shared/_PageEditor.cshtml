@@ -1,0 +1,51 @@
+﻿@using Areas.Admin.Models;
+@model dynamic
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Language Tabs -->
+        <ul class="nav nav-tabs" id="langTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link @(Model.CurrentLang == "mk" ? "active" : "")" id="mk-tab" data-bs-toggle="tab" data-bs-target="#mk" type="button">Македонски</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link @(Model.CurrentLang == "en" ? "active" : "")" id="en-tab" data-bs-toggle="tab" data-bs-target="#en" type="button">English</button>
+            </li>
+        </ul>
+
+        <div class="tab-content mt-3">
+            <div class="tab-pane fade show active" id="@Model.CurrentLang">
+                @await Html.PartialAsync("_HeroEditor", new { Hero = Model.PageContent.Hero })
+                @await Html.PartialAsync("_SectionEditor", new { Sections = Model.PageContent.Sections })
+                @if (Model is HomePageModel homeModel)
+                {
+                    @await Html.PartialAsync("_ProgramsGrid", new { ProgramsSection = homeModel.ProgramsSection })
+                }
+                <!-- page-specific partials -->
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card sticky-top" style="top: 1rem;">
+            <div class="card-header">
+                <h5>Actions</h5>
+            </div>
+            <div class="card-body">
+                <button type="button" class="btn btn-primary w-100 mb-2" onclick="previewPage('@Model.Slug', '@Model.CurrentLang')">
+                    Preview
+                </button>
+                <button type="submit" class="btn btn-success w-100 mb-2">Save</button>
+                <a href="/preview/@Model.Slug?lang=@Model.CurrentLang" target="_blank" class="btn btn-outline-primary w-100">Live Preview</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+        function previewPage(slug, lang) {
+            fetch(`/api/pages/${slug}?lang=${lang}`)
+                .then(r => r.json())
+                .then(data => {
+                    showPreviewModal(data);
+                });
+        }
+</script>

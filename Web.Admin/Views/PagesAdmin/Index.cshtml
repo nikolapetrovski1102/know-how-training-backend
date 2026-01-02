@@ -1,40 +1,38 @@
-﻿@model List<Core.Application.DTOs.PageSummaryDto>
+﻿@model IEnumerable<Core.Application.DTOs.PageSummaryDto>
 
-@{
-    ViewData["Title"] = "Pages";
-}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Pages (@Model.Count())</h1>
+    <a asp-action="Create" class="btn btn-primary">+ New Page</a>
+</div>
 
-<h1 class="mb-4">Website Pages</h1>
-
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>Slug</th>
-            <th>Published</th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var p in Model)
-        {
+<div class="table-responsive">
+    <table class="table table-hover">
+        <thead>
             <tr>
-                <td>@p.Slug</td>
-                <td>
-                    @if (p.IsPublished)
-                    {
-                        <span class="badge bg-success">Visible</span>
-                    }
-                    else
-                    {
-                        <span class="badge bg-secondary">Hidden</span>
-                    }
-                </td>
-                <td>
-                    <a asp-action="Edit" asp-route-id="@p.Id" class="btn btn-primary btn-sm">
-                        Edit content
-                    </a>
-                </td>
+                <th>Slug</th>
+                <th>Published</th>
+                <th>Menu Item</th>
+                <th>Sort Order</th>
+                <th>Languages</th>
+                <th>Actions</th>
             </tr>
-        }
-    </tbody>
-</table>
+        </thead>
+        <tbody>
+            @foreach (var p in Model)
+            {
+                <tr>
+                    <td>@p.Slug</td>
+                    <td>
+                        <span class="badge @(p.IsPublished ? "bg-success" : "bg-secondary")">
+                            @(p.IsPublished ? "Yes" : "No")
+                        </span>
+                    </td>
+                    <td>@p.SortOrder</td>
+                    <td>
+                        <a asp-action="Edit" asp-route-id="@p.Id" class="btn btn-sm btn-outline-primary">Edit</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

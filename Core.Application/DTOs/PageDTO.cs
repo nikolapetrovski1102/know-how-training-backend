@@ -8,12 +8,11 @@ namespace Core.Application.DTOs
 {
     public class PageDto
     {
+        public int PageId { get; set; }
         public string Slug { get; set; } = string.Empty;
+        public bool IsPublished { get; set; }
+        public string LanguageCode { get; set; } = string.Empty;
         public PageContentDto Content { get; set; } = new();
         public List<ProgramDto> Programs { get; set; } = new();
-        public List<TrainerDto> Trainers { get; set; } = new();
-        public List<TestimonialDto> Testimonials { get; set; } = new();
-        public List<CompanyReferenceDto> References { get; set; } = new();
-        public List<GalleryItemDto> Gallery { get; set; } = new();
     }
 }

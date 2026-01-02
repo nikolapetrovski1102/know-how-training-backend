@@ -1,0 +1,56 @@
+﻿@model dynamic
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5>Sections (@Model.Sections.Count)</h5>
+        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addSection()">+ Add Section</button>
+    </div>
+    <div class="card-body">
+        @for (int i = 0; i < Model.Sections.Count; i++)
+        {
+            <div class="section-item border p-3 mb-3 rounded" data-index="@i">
+                <div class="row align-items-center">
+                    <div class="col-md-3">
+                        <label class="form-label">Type</label>
+                        <select asp-for="@Model.Sections[i].Type" class="form-select" onchange="updateSectionFields(@i)">
+                            <option value="richText">Rich Text</option>
+                            <option value="socialProof">Social Proof</option>
+                            <option value="testimonials">Testimonials</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Title</label>
+                        <input asp-for="@Model.Sections[i].Title" class="form-control" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Sort Order</label>
+                        <input asp-for="@Model.Sections[i].SortOrder" type="number" class="form-control" />
+                    </div>
+                    <div class="col-md-3 text-end">
+                        <button type="button" class="btn btn-sm btn-danger" onclick="removeSection(@i)">Remove</button>
+                    </div>
+                </div>
+                <!-- Dynamic fields based on type -->
+                <div id="fields-@i">
+                    @if (Model.Sections[i].Type == "socialProof")
+                    {
+                        @await Html.PartialAsync("_SocialProofFields", new { Index = i, Section = Model.Sections[i] })
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<script>
+    let sectionCounter = @Model.Sections.Count;
+    function addSection() {
+        const html = `
+            <div class="section-item border p-3 mb-3 rounded" data-index="${sectionCounter}">
+            </div>`;
+        sectionCounter++;
+    }
+
+    function updateSectionFields(index) {
+        // AJAX load type-specific fields or show/hide
+    }
+</script>

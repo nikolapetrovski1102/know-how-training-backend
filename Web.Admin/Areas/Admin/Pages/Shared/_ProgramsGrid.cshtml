@@ -1,0 +1,49 @@
+﻿@model dynamic
+<div class="card mb-4">
+    <div class="card-header">
+        <h6>Programs Overview (@Model.ProgramsSection.Programs.Count)</h6>
+    </div>
+    <div class="card-body">
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label class="form-label">Details CTA Label</label>
+                <input asp-for="ProgramsSection.DetailsCtaLabel" class="form-control" />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Request Offer CTA Label</label>
+                <input asp-for="ProgramsSection.RequestOfferCtaLabel" class="form-control" />
+            </div>
+        </div>
+
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Slug</th>
+                    <th>Short Description</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (int i = 0; i < Model.ProgramsSection.Programs.Count; i++)
+                {
+                    <tr>
+                        <td>
+                            <input asp-for="ProgramsSection.Programs[i].Title" class="form-control form-control-sm" />
+                        </td>
+                        <td>
+                            <input asp-for="ProgramsSection.Programs[i].Slug" class="form-control form-control-sm" />
+                        </td>
+                        <td>
+                            <textarea asp-for="ProgramsSection.Programs[i].ShortDescription" class="form-control form-control-sm" rows="2"></textarea>
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeProgram(@i)">Remove</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <button type="button" class="btn btn-outline-primary" onclick="addProgram()">+ Add Program</button>
+    </div>
+</div>

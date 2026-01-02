@@ -18,6 +18,7 @@ namespace Core.Application.DTOs
         public int? MaxParticipants { get; set; }
         public decimal? PriceRangeMin { get; set; }
         public decimal? PriceRangeMax { get; set; }
+        public string? CategoryName { get; set; }
         public List<TrainerDto> Trainers { get; set; } = new();
     }
 }
