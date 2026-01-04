@@ -11,6 +11,7 @@ namespace Core.Application.Services
     {
         Task<List<PageSummaryDto>> GetAllPagesAsync();
         Task<bool> SavePageAsync(PageAdminDto page);
-        Task<PageAdminDto?> GetPageForEditAsync(int id);
+        Task<PageAdminDto?> GetPageForEditAsync(int id, string lang);
+        Task<PageAdminLanguageDto?> CreatePageLanguageFromTemplateAsync(int pageId, string targetLanguageCode, string sourceLanguageCode = "en");
     }
 }

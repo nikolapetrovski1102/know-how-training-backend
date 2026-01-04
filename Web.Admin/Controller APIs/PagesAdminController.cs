@@ -26,7 +26,7 @@ namespace Web.Admin.Controller_APIs
         [HttpGet("admin/pages/{id}")]
         public async Task<ActionResult<PageAdminDto>> GetPage(int id)
         {
-            var dto = await _pageAdminService.GetPageForEditAsync(id);
+            var dto = await _pageAdminService.GetPageForEditAsync(id, "en");
             return Ok(dto);
         }
 

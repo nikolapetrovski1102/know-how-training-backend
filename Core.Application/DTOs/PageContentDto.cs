@@ -10,7 +10,7 @@ namespace Core.Application.DTOs
     {
         public SeoDto Seo { get; set; } = new();
         public HeroDto? Hero { get; set; }
-        public List<ContentSectionDto> Sections { get; set; } = new();
+        public string Sections { get; set; }
         public OpenGraphDto OpenGraph { get; set; } = new();
     }
 }

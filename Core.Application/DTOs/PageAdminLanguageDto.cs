@@ -8,6 +8,8 @@ namespace Core.Application.DTOs
 {
     public class PageAdminLanguageDto
     {
+        public int Id { get; set; }
+        public int PageId { get; set; }
         public int LanguageId { get; set; }
         public string LanguageCode { get; set; } = string.Empty;
         public string? SeoTitle { get; set; }
@@ -21,5 +23,8 @@ namespace Core.Application.DTOs
         public string? OpenGraphDescription { get; set; }
         public string? OpenGraphImage { get; set; }
         public bool IsPublished { get; set; } = true;
+        public string HeroImage { get; set; }
+        public string SeoKeywords { get; set; }
+        public string MenuTitle { get; set; }
     }
 }

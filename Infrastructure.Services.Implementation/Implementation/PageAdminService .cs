@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Core.Application.DTOs;
 using Core.Application.Services;
 using Core.Application.Helpers;
+using Infrastructure.Services;
 
 namespace Infrastructure.Data.Services
 {
@@ -15,12 +16,75 @@ namespace Infrastructure.Data.Services
     {
         private readonly string _connectionString;
         private readonly ILogger<PageAdminService> _logger;
+        private readonly ICacheService _cacheService;
 
-        public PageAdminService(IConfiguration configuration, ILogger<PageAdminService> logger)
+        public PageAdminService(IConfiguration configuration, ILogger<PageAdminService> logger,ICacheService cacheService)        
         {
-            _connectionString = configuration.GetConnectionString("DefaultConnection")
-                ?? throw new ArgumentNullException("Connection string not found");
+            _connectionString = configuration.GetConnectionString("DefaultConnection")!;
             _logger = logger;
+            _cacheService = cacheService;
+        }
+
+        public async Task<PageAdminLanguageDto?> CreatePageLanguageFromTemplateAsync(
+            int pageId,
+            string targetLanguageCode,
+            string sourceLanguageCode = "en")
+        {
+            try
+            {
+                using var connection = new SqlConnection(_connectionString);
+                await connection.OpenAsync();
+
+                using var cmd = new SqlCommand("CreatePageLanguageFromTemplate", connection)
+                {
+                    CommandType = CommandType.StoredProcedure
+                };
+
+                cmd.Parameters.AddWithValue("@PageId", pageId);
+                cmd.Parameters.AddWithValue("@TargetLanguageCode", targetLanguageCode);
+                cmd.Parameters.AddWithValue("@SourceLanguageCode", sourceLanguageCode);
+
+                using var reader = await cmd.ExecuteReaderAsync();
+
+                if (!await reader.ReadAsync())
+                {
+                    _logger.LogError("Failed to create language template for PageId={PageId}, Language={Language}",
+                        pageId, targetLanguageCode);
+                    return null;
+                }
+
+                var langDto = new PageAdminLanguageDto
+                {
+                    Id = reader.GetInt32(reader.GetOrdinal("Id")),
+                    PageId = reader.GetInt32(reader.GetOrdinal("PageId")),
+                    LanguageId = reader.GetByte(reader.GetOrdinal("LanguageId")),
+                    LanguageCode = reader.GetString(reader.GetOrdinal("LanguageCode")),
+                    SeoTitle = reader.GetString(reader.GetOrdinal("SeoTitle")),
+                    MenuTitle = reader.IsDBNull(reader.GetOrdinal("MenuTitle"))
+                        ? null
+                        : reader.GetString(reader.GetOrdinal("MenuTitle")),
+                    SeoDescription = reader.IsDBNull(reader.GetOrdinal("SeoDescription"))
+                        ? null
+                        : reader.GetString(reader.GetOrdinal("SeoDescription")),
+                    SeoKeywords = reader.IsDBNull(reader.GetOrdinal("SeoKeywords"))
+                        ? null
+                        : reader.GetString(reader.GetOrdinal("SeoKeywords")),
+                    ContentSectionsJson = reader.IsDBNull(reader.GetOrdinal("Content"))
+                        ? null
+                        : reader.GetString(reader.GetOrdinal("Content"))
+                };
+
+                _logger.LogInformation("Created new language template: PageId={PageId}, Language={Language}, NewId={NewId}",
+                    pageId, targetLanguageCode, langDto.Id);
+
+                return langDto;
+            }
+            catch (SqlException ex)
+            {
+                _logger.LogError(ex, "SQL Error creating language template for PageId={PageId}, Language={Language}",
+                    pageId, targetLanguageCode);
+                throw;
+            }
         }
 
         public async Task<List<PageSummaryDto>> GetAllPagesAsync()
@@ -59,7 +123,7 @@ namespace Infrastructure.Data.Services
             }
         }
 
-        public async Task<PageAdminDto?> GetPageForEditAsync(int id)
+        public async Task<PageAdminDto?> GetPageForEditAsync(int id, string language)
         {
             try
             {
@@ -71,7 +135,7 @@ namespace Infrastructure.Data.Services
                     CommandType = CommandType.StoredProcedure
                 };
                 cmd.Parameters.AddWithValue("@Id", id);
-                cmd.Parameters.AddWithValue("@LanguageCode", "en");
+                cmd.Parameters.AddWithValue("@LanguageCode", language);
 
                 using var reader = await cmd.ExecuteReaderAsync();
 
@@ -150,7 +214,6 @@ namespace Infrastructure.Data.Services
                 using var connection = new SqlConnection(_connectionString);
                 await connection.OpenAsync();
 
-                // Build language contents JSON
                 var languageContents = page.Languages.Select(lang => new
                 {
                     LanguageId = lang.LanguageId,
@@ -173,7 +236,6 @@ namespace Infrastructure.Data.Services
                     CommandType = CommandType.StoredProcedure
                 };
 
-                // Add parameters (exactly matching stored procedure)
                 cmd.Parameters.AddWithValue("@PageId", page.Id);
                 cmd.Parameters.AddWithValue("@Slug", page.Slug);
                 cmd.Parameters.AddWithValue("@IsPublished", page.IsPublished);
@@ -184,15 +246,20 @@ namespace Infrastructure.Data.Services
 
                 _logger.LogInformation("Executing Admin_SavePage for PageId={PageId}", page.Id);
 
-                // ✅ Use ExecuteScalarAsync to read "SELECT 1 as result"
                 var result = await cmd.ExecuteScalarAsync();
 
                 _logger.LogInformation("Admin_SavePage returned: {Result}", result);
 
-                // ✅ Check if result is 1
                 if (result != null && Convert.ToInt32(result) == 1)
                 {
                     _logger.LogInformation("Page {PageId} saved successfully", page.Id);
+
+                    // ✅ Invalidate cache for this page (all languages)
+                    InvalidatePageCache(page.Slug);
+
+                    // ✅ Also invalidate navigation cache (menu might have changed)
+                    InvalidateNavigationCache();
+
                     return true;
                 }
 
@@ -212,6 +279,7 @@ namespace Infrastructure.Data.Services
             }
         }
 
+        #region Private Methods
         private int GetLanguageId(string languageCode)
         {
             return languageCode.ToLower() switch
@@ -221,5 +289,21 @@ namespace Infrastructure.Data.Services
                 _ => 1
             };
         }
+        private void InvalidatePageCache(string slug)
+        {
+            var pattern = CacheKeys.PagePattern(slug);
+            _cacheService.RemoveByPattern(pattern);
+            _logger.LogInformation("Invalidated cache for page: {Slug}", slug);
+        }
+
+        // ✅ Invalidate navigation cache for all languages
+        private void InvalidateNavigationCache()
+        {
+            var pattern = CacheKeys.NavigationPattern();
+            _cacheService.RemoveByPattern(pattern);
+            _logger.LogInformation("Invalidated navigation cache");
+        }
+        #endregion
+
     }
 }

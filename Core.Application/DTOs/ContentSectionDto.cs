@@ -11,6 +11,9 @@ namespace Core.Application.DTOs
         public string Type { get; set; } = string.Empty; // "programs", "stats", "testimonials", etc.
         public string? Title { get; set; }
         public string? Subtitle { get; set; }
-        public object? Items { get; set; } // ProgramSummaryDto[], StatDto[], etc.
+        public object? Items { get; set; } // Can be List<object> or JsonElement
+        public string Greeting { get; set; }
+        public string Name { get; set; }
+        public string Description { get; set; }
     }
 }
