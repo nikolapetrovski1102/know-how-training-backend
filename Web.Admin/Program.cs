@@ -19,7 +19,7 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("ReactDev", policy =>
-        policy.WithOrigins("http://localhost:5173")
+        policy.WithOrigins("*")
               .AllowAnyMethod()
               .AllowAnyHeader()
     );

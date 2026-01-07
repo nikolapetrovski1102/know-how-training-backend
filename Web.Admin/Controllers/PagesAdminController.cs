@@ -205,12 +205,6 @@ namespace Web.API.Controllers
                 case "seo":
                     ApplySeoChange(langContent, pathParts, change.Edited);
                     break;
-                case "intro":
-                    ApplyIntroChange(langContent, pathParts, change.Edited);
-                    break;
-                case "stats":
-                    ApplyStatsChange(langContent, pathParts, change.Edited);
-                    break;
                 case "sections":
                     ApplySectionsChange(langContent, pathParts, change.Edited);
                     break;
@@ -277,161 +271,148 @@ namespace Web.API.Controllers
             }
         }
 
-        private void ApplyIntroChange(PageAdminLanguageDto langContent, string[] pathParts, string value)
+        private void ApplySectionsChange(PageAdminLanguageDto langContent, string[] pathParts, string value)
         {
-            if (pathParts.Length < 2) return;
-
-            _logger.LogDebug("Applying intro change: {Field} = {Value}", pathParts[1], value);
-
-            // Parse sections JSON and update intro-card
-            var sections = ParseSections(langContent.ContentSectionsJson);
-
-            var introSection = sections.FirstOrDefault(s =>
-                string.Equals(s.Type, "intro-card", StringComparison.OrdinalIgnoreCase));
-
-            if (introSection == null)
-            {
-                _logger.LogWarning("Intro section not found, creating new one");
-                introSection = new ContentSectionDto { Type = "intro-card" };
-                sections.Add(introSection);
-            }
-
-            switch (pathParts[1])
-            {
-                case "greeting":
-                    introSection.Greeting = value;
-                    break;
-                case "name":
-                    introSection.Name = value;
-                    break;
-                case "title":
-                    introSection.Title = value;
-                    break;
-                case "description":
-                    introSection.Description = value;
-                    break;
-                default:
-                    _logger.LogWarning("Unknown intro field: {Field}", pathParts[1]);
-                    break;
-            }
-
-            langContent.ContentSectionsJson = JsonSerializer.Serialize(sections, new JsonSerializerOptions
-            {
-                WriteIndented = false
-            });
-
-            _logger.LogDebug("Updated ContentSectionsJson: {Json}", langContent.ContentSectionsJson);
-        }
-
-        private void ApplyStatsChange(PageAdminLanguageDto langContent, string[] pathParts, string value)
-        {
-            // Expected format: stats.items (full array) OR stats.items.0.value OR stats.title
-            if (pathParts.Length < 2) return;
-
-            _logger.LogDebug("Applying stats change: {Path} = {Value}", string.Join(".", pathParts), value);
-
-            var sections = ParseSections(langContent.ContentSectionsJson);
-
-            var statsSection = sections.FirstOrDefault(s =>
-                string.Equals(s.Type, "stats", StringComparison.OrdinalIgnoreCase));
-
-            if (statsSection == null)
-            {
-                _logger.LogWarning("Stats section not found, creating new one");
-                statsSection = new ContentSectionDto
-                {
-                    Type = "stats",
-                    Items = new List<object>()
-                };
-                sections.Add(statsSection);
-            }
-
-            // Handle stats.title
-            if (pathParts.Length == 2 && pathParts[1] == "title")
-            {
-                statsSection.Title = value;
-                langContent.ContentSectionsJson = JsonSerializer.Serialize(sections, new JsonSerializerOptions
-                {
-                    WriteIndented = false
-                });
-                _logger.LogDebug("Updated stats title");
-                return;
-            }
-
-            // Handle stats.items (FULL ARRAY REPLACEMENT)
-            if (pathParts.Length == 2 && pathParts[1] == "items")
+            var sectionsList = new List<ContentSectionDto>();
+            if (pathParts.Length == 1 && pathParts[0] == "sections")
             {
                 try
                 {
-                    // Deserialize the entire items array
-                    var newItems = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(value);
-
-                    if (newItems != null)
+                    // Validate JSON and assign directly
+                    sectionsList = JsonSerializer.Deserialize<List<ContentSectionDto>>(value, new JsonSerializerOptions
                     {
-                        statsSection.Items = newItems;
-                        _logger.LogInformation("Updated entire stats items array with {Count} items", newItems.Count);
+                        PropertyNameCaseInsensitive = true
+                    });
+
+                    if (sectionsList != null)
+                    {
+                        langContent.ContentSectionsJson = JsonSerializer.Serialize(sectionsList, new JsonSerializerOptions
+                        {
+                            WriteIndented = false
+                        });
+                        _logger.LogInformation("Replaced entire sections array with {Count} sections", sectionsList.Count);
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to deserialize stats items array: {Value}", value);
+                    _logger.LogError(ex, "Failed to deserialize sections array: {Value}", value);
                 }
-
-                langContent.ContentSectionsJson = JsonSerializer.Serialize(sections, new JsonSerializerOptions
-                {
-                    WriteIndented = false
-                });
                 return;
             }
 
-            // Handle stats.items.{index}.{property} (INDIVIDUAL ITEM PROPERTY)
-            if (pathParts.Length == 4 && pathParts[1] == "items" && int.TryParse(pathParts[2], out int statIndex))
+            // Handle individual section updates: sections.0.title, sections.1.items, etc.
+            if (pathParts.Length < 2 || !int.TryParse(pathParts[1], out int sectionIndex)) return;
+
+            var sections = ParseSections(langContent.ContentSectionsJson);
+
+            if (sectionIndex >= sections.Count)
             {
-                if (statsSection.Items == null)
-                {
-                    statsSection.Items = new List<object>();
-                }
+                _logger.LogWarning("Section index {Index} out of range (total: {Count})", sectionIndex, sections.Count);
+                return;
+            }
 
-                // Deserialize items as JsonElement first, then convert to dictionary
-                var itemsList = new List<Dictionary<string, object>>();
+            var section = sections[sectionIndex];
 
-                if (statsSection.Items is JsonElement jsonElement && jsonElement.ValueKind == JsonValueKind.Array)
+            if (pathParts.Length == 3)
+            {
+                // Simple field update: sections.0.title, sections.0.subtitle
+                var fieldName = pathParts[2];
+
+                switch (fieldName.ToLower())
                 {
-                    itemsList = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(jsonElement.GetRawText())
-                        ?? new List<Dictionary<string, object>>();
-                }
-                else if (statsSection.Items is List<object> objList)
-                {
-                    foreach (var item in objList)
-                    {
-                        if (item is JsonElement je)
+                    case "title":
+                        section.Title = value;
+                        break;
+                    case "subtitle":
+                        section.Subtitle = value;
+                        break;
+                    case "description":
+                        section.Description = value;
+                        break;
+                    case "greeting":
+                        section.Greeting = value;
+                        break;
+                    case "name":
+                        section.Name = value;
+                        break;
+                    case "layout":
+                        section.Layout = value;
+                        break;
+                    case "backgroundcolor":
+                        section.BackgroundColor = value;
+                        break;
+                    case "columns":
+                        if (int.TryParse(value, out int cols))
+                            section.Columns = cols;
+                        break;
+                    case "items":
+                        // Full items array replacement for this section
+                        try
                         {
-                            var dict = JsonSerializer.Deserialize<Dictionary<string, object>>(je.GetRawText());
-                            if (dict != null) itemsList.Add(dict);
+                            var items = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(value);
+                            section.Items = items;
+                            _logger.LogInformation("Replaced items array in section {Index} with {Count} items", sectionIndex, items?.Count ?? 0);
                         }
-                        else if (item is Dictionary<string, object> dict)
+                        catch (Exception ex)
                         {
-                            itemsList.Add(dict);
+                            _logger.LogError(ex, "Failed to deserialize items array for section {Index}", sectionIndex);
+                        }
+                        break;
+                    default:
+                        _logger.LogWarning("Unknown section field: {Field}", fieldName);
+                        break;
+                }
+            }
+            else if (pathParts.Length >= 4 && pathParts[2] == "items")
+            {
+                // Item-level update: sections.0.items.0.value
+                if (int.TryParse(pathParts[3], out int itemIndex) && pathParts.Length == 5)
+                {
+                    if (section.Items == null)
+                        section.Items = new List<object>();
+
+                    // Deserialize items as dictionary list
+                    var itemsList = new List<Dictionary<string, object>>();
+
+                    if (section.Items is JsonElement jsonElement && jsonElement.ValueKind == JsonValueKind.Array)
+                    {
+                        itemsList = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(jsonElement.GetRawText())
+                            ?? new List<Dictionary<string, object>>();
+                    }
+                    else if (section.Items is List<object> objList)
+                    {
+                        foreach (var item in objList)
+                        {
+                            if (item is JsonElement je)
+                            {
+                                var dict = JsonSerializer.Deserialize<Dictionary<string, object>>(je.GetRawText());
+                                if (dict != null) itemsList.Add(dict);
+                            }
+                            else if (item is Dictionary<string, object> dict)
+                            {
+                                itemsList.Add(dict);
+                            }
                         }
                     }
+                    else if (section.Items is IEnumerable<Dictionary<string, object>> dictList)
+                    {
+                        itemsList = dictList.ToList();
+                    }
+
+                    // Ensure item exists
+                    while (itemsList.Count <= itemIndex)
+                    {
+                        itemsList.Add(new Dictionary<string, object>());
+                    }
+
+                    var propertyName = char.ToUpper(pathParts[4][0]) + pathParts[4].Substring(1);
+                    itemsList[itemIndex][propertyName] = value;
+
+                    _logger.LogDebug("Updated section {SectionIndex}, item {ItemIndex}.{Property} to: {Value}",
+                        sectionIndex, itemIndex, propertyName, value);
+
+                    section.Items = itemsList;
                 }
-                else if (statsSection.Items is IEnumerable<Dictionary<string, object>> dictList)
-                {
-                    itemsList = dictList.ToList();
-                }
-
-                // Ensure the item exists at the index
-                while (itemsList.Count <= statIndex)
-                {
-                    itemsList.Add(new Dictionary<string, object>());
-                }
-
-                var propertyName = char.ToUpper(pathParts[3][0]) + pathParts[3].Substring(1); // Capitalize first letter
-                itemsList[statIndex][propertyName] = value;
-
-                _logger.LogDebug("Updated stats item {Index}.{Property} to: {Value}", statIndex, propertyName, value);
-
-                statsSection.Items = itemsList;
             }
 
             langContent.ContentSectionsJson = JsonSerializer.Serialize(sections, new JsonSerializerOptions
@@ -440,34 +421,6 @@ namespace Web.API.Controllers
             });
 
             _logger.LogDebug("Updated ContentSectionsJson");
-        }
-
-        private void ApplySectionsChange(PageAdminLanguageDto langContent, string[] pathParts, string value)
-        {
-            if (pathParts.Length < 3 || !int.TryParse(pathParts[1], out int sectionIndex)) return;
-
-            // Parse sections JSON and update section
-            var sections = ParseSections(langContent.ContentSectionsJson);
-
-            if (sectionIndex < sections.Count)
-            {
-                var section = sections[sectionIndex];
-
-                switch (pathParts[2])
-                {
-                    case "title":
-                        section.Title = value;
-                        break;
-                    case "subtitle":
-                        section.Subtitle = value;
-                        break;
-                }
-            }
-
-            langContent.ContentSectionsJson = JsonSerializer.Serialize(sections, new JsonSerializerOptions
-            {
-                WriteIndented = false
-            });
         }
 
         private List<ContentSectionDto> ParseSections(string? sectionsJson)

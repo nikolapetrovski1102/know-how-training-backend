@@ -15,5 +15,8 @@ namespace Core.Application.DTOs
         public string Greeting { get; set; }
         public string Name { get; set; }
         public string Description { get; set; }
+        public string Layout { get; set; }
+        public string BackgroundColor { get; set; }
+        public int Columns { get; set; }
     }
 }
