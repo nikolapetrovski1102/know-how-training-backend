@@ -24,7 +24,14 @@ namespace Core.Application.DTOs
         public string? OpenGraphImage { get; set; }
         public bool IsPublished { get; set; } = true;
         public string HeroImage { get; set; }
-        public string SeoKeywords { get; set; }
+        public string BackgroundImage { get; set; }
+        public string TestimonialImage1 { get; set; }
+        public string TestimonialImage2 { get; set; }
+        public string IntroGreeting { get; set; }
+        public string IntroName { get; set; }
+        public string IntroTitle { get; set; }
+        public string IntroDescription { get; set; }
         public string MenuTitle { get; set; }
+        public string SeoKeywords { get; set; }
     }
 }

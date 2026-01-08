@@ -2,6 +2,7 @@ using Core.Application.Services;
 using Infrastructure.Data.Services;
 using Infrastructure.Services;
 using Infrastructure.Services.Implementation;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -33,6 +34,11 @@ builder.Services.AddDbContext<Areas.Admin.Data.PageContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddRazorPages(options => options.RootDirectory = "/Areas/Admin/Pages");
+
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 10_485_760;
+});
 
 var app = builder.Build();
 
