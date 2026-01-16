@@ -170,7 +170,8 @@ namespace Infrastructure.Data.Services
                         OpenGraphTitle = reader.GetSafeString("OpenGraphTitle"),
                         OpenGraphDescription = reader.GetSafeString("OpenGraphDescription"),
                         OpenGraphImage = reader.GetSafeString("OpenGraphImage"),
-                        IsPublished = reader.GetBoolean("IsPublished")
+                        IsPublished = reader.GetBoolean("IsPublished"),
+                        HeroImage = reader.GetSafeString("HeroImage")
                     }
                 },
                         Programs = new List<ProgramDto>()
@@ -233,20 +234,21 @@ namespace Infrastructure.Data.Services
                 cmd.Parameters.AddWithValue("@HeroCtaText", (object?)langContent.HeroCtaText ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@HeroCtaUrl", (object?)langContent.HeroCtaUrl ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@IsPublished", langContent.IsPublished);
-                cmd.Parameters.AddWithValue("@ContentSections", (object?)langContent.ContentSectionsJson ?? DBNull.Value);
 
-
-                // ✅ Only ContentSections is JSON
                 cmd.Parameters.AddWithValue("@ContentSections",
                     (object?)langContent.ContentSectionsJson ?? DBNull.Value);
 
                 var result = await cmd.ExecuteScalarAsync();
 
-                if (result != null && Convert.ToInt32(result) == 1 && _pendingFileUploads.Any())
+                if (result != null && Convert.ToInt32(result) == 1)
                 {
-                    await InsertFileUploadsAsync(pageId, langContent.LanguageCode);
-                    _logger.LogInformation("Inserted {Count} file uploads for Page {PageId}",
-                        _pendingFileUploads.Count, pageId);
+                    if (_pendingFileUploads.Any())
+                    {
+                        await InsertFileUploadsAsync(pageId, langContent.LanguageCode);
+
+                        _logger.LogInformation("Inserted {Count} file uploads for Page {PageId}",
+                            _pendingFileUploads.Count, pageId);
+                    }
 
                     _logger.LogInformation("Page language saved: PageId={PageId}, LanguageId={LanguageId}",
                         pageId, langContent.LanguageId);
