@@ -14,12 +14,10 @@ builder.Services.AddSingleton<ICacheService, CacheService>();
 builder.Services.AddHostedService<CacheWarmerService>();
 
 builder.Services.AddControllers();
-builder.Services.AddRazorPages();
-builder.Services.AddControllersWithViews();
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("ReactDev", policy =>
+    options.AddPolicy("*", policy =>
         policy.WithOrigins("*")
               .AllowAnyMethod()
               .AllowAnyHeader()
@@ -33,34 +31,29 @@ builder.Services.AddScoped<INavigationService, NavigationService>();
 builder.Services.AddDbContext<Areas.Admin.Data.PageContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.AddRazorPages(options => options.RootDirectory = "/Areas/Admin/Pages");
-
 builder.Services.Configure<FormOptions>(options =>
 {
     options.MultipartBodyLengthLimit = 10_485_760;
 });
 
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
 var app = builder.Build();
+
+if (app.Environment.IsProduction())
+{
+    app.UseDeveloperExceptionPage();
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
 app.UseStaticFiles();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseDeveloperExceptionPage();
-}
-
-app.UseCors("ReactDev");
+app.UseCors("*");
 app.UseRouting();
 app.UseAuthorization();
 
 app.MapControllers();
-app.MapControllerRoute(
-    name: "areas",
-    pattern: "{area:exists}/{controller=Home}/{action=Index}/{id?}"
-);
-app.MapControllerRoute(
-    name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}"
-);
 
 app.Run();

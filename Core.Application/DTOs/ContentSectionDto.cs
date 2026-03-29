@@ -18,5 +18,8 @@ namespace Core.Application.DTOs
         public string Layout { get; set; }
         public string BackgroundColor { get; set; }
         public int Columns { get; set; }
+        public string? ImageUrl { get; set; }
+        public string? Alignment { get; set; }
+        public int? StyleId { get; set; }
     }
 }

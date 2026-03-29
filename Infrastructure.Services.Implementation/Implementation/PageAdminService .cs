@@ -349,18 +349,16 @@ namespace Infrastructure.Data.Services
                 return false;
             }
         }
-
         public void ApplyChanges(PageAdminLanguageDto langContent, List<EditChange> changes)
         {
-            // ✅ Parse ContentSections JSON only once
             List<ContentSectionDto>? sections = null;
             bool sectionsModified = false;
 
             var jsonPaths = new HashSet<string>
-        {
-            "sections", "intro", "stats", "videos", "coaches",
-            "resources", "testimonials", "faq", "programs", "featured-programs"
-        };
+            {
+                "sections", "hero-banner", "intro", "stats", "videos", "coaches",
+                "resources", "testimonials", "faq", "programs", "featured-programs"
+            };
 
             var scalarPaths = new HashSet<string> { "hero", "seo", "images" };
 
@@ -385,7 +383,6 @@ namespace Infrastructure.Data.Services
                 }
             }
 
-            // ✅ Serialize JSON only once if modified
             if (sectionsModified && sections != null)
             {
                 langContent.ContentSectionsJson = JsonSerializer.Serialize(sections,
@@ -441,17 +438,18 @@ namespace Infrastructure.Data.Services
             var sectionType = pathParts[0];
 
             var typeMapping = new Dictionary<string, string[]>
-    {
-        { "intro", new[] { "intro-card" } },
-        { "stats", new[] { "stats" } },
-        { "videos", new[] { "videos" } },
-        { "coaches", new[] { "coaches" } },
-        { "resources", new[] { "resources" } },
-        { "testimonials", new[] { "testimonials" } },
-        { "faq", new[] { "faq" } },
-        { "programs", new[] { "programs", "featured-programs" } },
-        { "featured-programs", new[] { "featured-programs" } }
-    };
+            {
+                { "hero-banner", new[] { "hero-banner" } },
+                { "intro", new[] { "intro-card" } },
+                { "stats", new[] { "stats" } },
+                { "videos", new[] { "videos" } },
+                { "coaches", new[] { "coaches" } },
+                { "resources", new[] { "resources" } },
+                { "testimonials", new[] { "testimonials" } },
+                { "faq", new[] { "faq" } },
+                { "programs", new[] { "programs", "featured-programs" } },
+                { "featured-programs", new[] { "featured-programs" } }
+            };
 
             ContentSectionDto? section = null;
             if (typeMapping.TryGetValue(sectionType, out var possibleTypes))
@@ -469,19 +467,15 @@ namespace Infrastructure.Data.Services
                 sections.Add(section);
             }
 
-            // ✅ LOG THE PATH FOR DEBUGGING
             _logger.LogDebug("ApplySectionUpdateByType: SectionType={Type}, PathParts=[{Parts}], PathLength={Length}",
                 sectionType, string.Join(", ", pathParts), pathParts.Length);
 
-            // Handle different path lengths
             if (pathParts.Length == 2)
             {
-                // stats.title OR stats.items (full replacement)
                 ApplySectionField(section, pathParts[1], value);
             }
             else if (pathParts.Length == 4 && pathParts[1] == "items" && int.TryParse(pathParts[2], out int itemIndex))
             {
-                // stats.items.0.value (individual item field)
                 _logger.LogDebug("Updating item field: itemIndex={Index}, field={Field}", itemIndex, pathParts[3]);
                 ApplySectionItemField(section, itemIndex, pathParts[3], value);
             }
@@ -490,7 +484,6 @@ namespace Infrastructure.Data.Services
                 _logger.LogWarning("Unhandled path pattern: {Path}", string.Join(".", pathParts));
             }
         }
-
         private void ApplySectionField(ContentSectionDto section, string field, string value)
         {
             _logger.LogDebug("ApplySectionField: Section={Type}, Field={Field}, ValueLength={Length}",
@@ -519,12 +512,43 @@ namespace Infrastructure.Data.Services
                 case "backgroundcolor":
                     section.BackgroundColor = value;
                     break;
+                case "imageurl":
+                    section.ImageUrl = value;
+                    if (IsFileUpload(value))
+                    {
+                        TrackFileUpload(section.Type, -1, "ImageUrl", value);
+                        _logger.LogDebug("Tracked hero-banner image upload: {Url}", value);
+                    }
+                    break;
+                case "alignment":
+                    var validAlignments = new[] { "left", "center", "right", "justify" };
+                    if (validAlignments.Contains(value?.ToLower()))
+                    {
+                        section.Alignment = value.ToLower();
+                        _logger.LogDebug("Set alignment to {Alignment} for section {Type}", value, section.Type);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Invalid alignment value: {Value}. Using default 'left'", value);
+                        section.Alignment = "left";
+                    }
+                    break;
+                case "styleid":
+                    if (int.TryParse(value, out int styleId))
+                    {
+                        section.StyleId = styleId;
+                        _logger.LogDebug("Set StyleId to {StyleId} for section {Type}", styleId, section.Type);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Invalid StyleId value: {Value}", value);
+                        section.StyleId = null;
+                    }
+                    break;
                 case "columns":
                     if (int.TryParse(value, out int cols))
                         section.Columns = cols;
                     break;
-
-                // ✅ CRITICAL FIX: Handle full items array replacement
                 case "items":
                     try
                     {
